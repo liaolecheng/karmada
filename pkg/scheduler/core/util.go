@@ -103,6 +103,50 @@ func calAvailableReplicas(clusters []*clusterv1alpha1.Cluster, spec *workv1alpha
 	return availableTargetClusters
 }
 
+func calAvailableComponentSets(clusters []*clusterv1alpha1.Cluster, spec *workv1alpha2.ResourceBindingSpec) []workv1alpha2.TargetCluster {
+	availableTargetClusters := make([]workv1alpha2.TargetCluster, len(clusters))
+
+	// Set the boundary.
+	for i := range availableTargetClusters {
+		availableTargetClusters[i].Name = clusters[i].Name
+		availableTargetClusters[i].Replicas = math.MaxInt32
+	}
+
+	// Get the minimum value of MaxAvailableComponentSets in terms of all estimators.
+	estimators := estimatorclient.GetMultiComponentEstimator()
+	ctx := context.WithValue(context.TODO(), util.ContextKeyObject,
+		fmt.Sprintf("kind=%s, name=%s/%s", spec.Resource.Kind, spec.Resource.Namespace, spec.Resource.Name))
+	for name, estimator := range estimators {
+		res, err := estimator.MaxAvailableComponentSets(ctx, clusters, spec.ReplicaRequirements)
+		if err != nil {
+			klog.Errorf("Max cluster available replicas error: %v", err)
+			continue
+		}
+		klog.V(4).Infof("Invoked MaxAvailableComponentSets of estimator %s for workload(%s, kind=%s, %s): %v", name,
+			spec.Resource.APIVersion, spec.Resource.Kind, spec.Resource.Namespace, res)
+		for i := range res {
+			if res[i].Replicas == estimatorclient.UnauthenticReplica {
+				continue
+			}
+			if availableTargetClusters[i].Name == res[i].Name && availableTargetClusters[i].Replicas > res[i].Replicas {
+				availableTargetClusters[i].Replicas = res[i].Replicas
+			}
+		}
+	}
+
+	// In most cases, the target cluster max available replicas should not be MaxInt32 unless the workload is best-effort
+	// and the scheduler-estimator has not been enabled. So we set the replicas to spec.Replicas for avoiding overflow.
+	for i := range availableTargetClusters {
+		if availableTargetClusters[i].Replicas == math.MaxInt32 {
+			availableTargetClusters[i].Replicas = 1
+		}
+	}
+
+	klog.V(4).Infof("Target cluster calculated by estimators (available cluster && maxAvailableReplicas): %v", availableTargetClusters)
+	return availableTargetClusters
+
+}
+
 // attachZeroReplicasCluster  attach cluster in clusters into targetCluster
 // The purpose is to avoid workload not appeared in rb's spec.clusters field
 func attachZeroReplicasCluster(clusters []*clusterv1alpha1.Cluster, targetClusters []workv1alpha2.TargetCluster) []workv1alpha2.TargetCluster {

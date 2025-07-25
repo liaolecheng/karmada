@@ -94,22 +94,41 @@ func (g *genericScheduler) Schedule(
 	}
 	klog.V(4).Infof("Feasible clusters scores: %v", clustersScore)
 
-	clusters, err := g.selectClusters(clustersScore, spec.Placement, spec)
-	if err != nil {
-		return result, fmt.Errorf("failed to select clusters: %w", err)
-	}
-	klog.V(4).Infof("Selected clusters: %v", clusters)
+	if len(spec.Components) > 0 {
+		// If the resource has components, we need to handle them separately.
+		klog.V(4).Infof("Resource has components, handling component replicas.")
 
-	clustersWithReplicas, err := g.assignReplicas(clusters, spec, status)
-	if err != nil {
-		return result, fmt.Errorf("failed to assign replicas: %w", err)
-	}
-	klog.V(4).Infof("Assigned Replicas: %v", clustersWithReplicas)
+		cluster, err := g.selectCluster(clustersScore, spec.Placement, spec)
+		if err != nil {
+			return result, fmt.Errorf("failed to select clusters for components: %w", err)
+		}
+		klog.V(4).Infof("Selected cluster for components: %v", cluster)
 
-	if scheduleAlgorithmOption.EnableEmptyWorkloadPropagation {
-		clustersWithReplicas = attachZeroReplicasCluster(clusters, clustersWithReplicas)
+		result.SuggestedClusters = []workv1alpha2.TargetCluster{
+			{
+				Name:     cluster.Name,
+				Replicas: 1,
+			},
+		}
+	} else {
+		clusters, err := g.selectClusters(clustersScore, spec.Placement, spec)
+		if err != nil {
+			return result, fmt.Errorf("failed to select clusters: %w", err)
+		}
+		klog.V(4).Infof("Selected clusters: %v", clusters)
+
+		clustersWithReplicas, err := g.assignReplicas(clusters, spec, status)
+		if err != nil {
+			return result, fmt.Errorf("failed to assign replicas: %w", err)
+		}
+		klog.V(4).Infof("Assigned Replicas: %v", clustersWithReplicas)
+
+		if scheduleAlgorithmOption.EnableEmptyWorkloadPropagation {
+			clustersWithReplicas = attachZeroReplicasCluster(clusters, clustersWithReplicas)
+		}
+
+		result.SuggestedClusters = clustersWithReplicas
 	}
-	result.SuggestedClusters = clustersWithReplicas
 
 	return result, nil
 }
@@ -179,6 +198,12 @@ func (g *genericScheduler) prioritizeClusters(
 	}
 
 	return result, nil
+}
+
+// scheduleWithComponents handles the scheduling of resources with components.
+func (g *genericScheduler) selectCluster(clustersScore framework.ClusterScoreList,
+	placement *policyv1alpha1.Placement, spec *workv1alpha2.ResourceBindingSpec) (*clusterv1alpha1.Cluster, error) {
+	return SelectCluster(clustersScore, placement, spec)
 }
 
 func (g *genericScheduler) selectClusters(clustersScore framework.ClusterScoreList,

@@ -28,6 +28,29 @@ import (
 	"github.com/karmada-io/karmada/pkg/scheduler/metrics"
 )
 
+func SelectCluster(clustersScore framework.ClusterScoreList,
+	placement *policyv1alpha1.Placement, spec *workv1alpha2.ResourceBindingSpec) (*clusterv1alpha1.Cluster, error) {
+	startTime := time.Now()
+	defer metrics.ScheduleStep(metrics.ScheduleStepSelect, startTime)
+	var clusters []*clusterv1alpha1.Cluster
+	for _, clusterScore := range clustersScore {
+		clusters = append(clusters, clusterScore.Cluster)
+	}
+
+	clustersSets := calAvailableComponentSets(clusters, spec)
+	for _, clustersSet := range clustersSets {
+		if clustersSet.Replicas >= 1 {
+			// Map clustersSet to the corresponding *clusterv1alpha1.Cluster
+			for _, cluster := range clusters {
+				if cluster.Name == clustersSet.Name {
+					return cluster, nil
+				}
+			}
+			return nil, fmt.Errorf("no matching cluster found for clustersSet: %s", clustersSet.Name)
+		}
+	}
+}
+
 // SelectClusters selects clusters based on the placement and resource binding spec.
 func SelectClusters(clustersScore framework.ClusterScoreList,
 	placement *policyv1alpha1.Placement, spec *workv1alpha2.ResourceBindingSpec) ([]*clusterv1alpha1.Cluster, error) {
