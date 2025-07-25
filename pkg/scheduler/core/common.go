@@ -29,7 +29,7 @@ import (
 )
 
 func SelectCluster(clustersScore framework.ClusterScoreList,
-	placement *policyv1alpha1.Placement, spec *workv1alpha2.ResourceBindingSpec) (*clusterv1alpha1.Cluster, error) {
+	placement *policyv1alpha1.Placement, spec *workv1alpha2.ResourceBindingSpec) (string, error) {
 	startTime := time.Now()
 	defer metrics.ScheduleStep(metrics.ScheduleStepSelect, startTime)
 	var clusters []*clusterv1alpha1.Cluster
@@ -40,15 +40,11 @@ func SelectCluster(clustersScore framework.ClusterScoreList,
 	clustersSets := calAvailableComponentSets(clusters, spec)
 	for _, clustersSet := range clustersSets {
 		if clustersSet.Replicas >= 1 {
-			// Map clustersSet to the corresponding *clusterv1alpha1.Cluster
-			for _, cluster := range clusters {
-				if cluster.Name == clustersSet.Name {
-					return cluster, nil
-				}
-			}
-			return nil, fmt.Errorf("no matching cluster found for clustersSet: %s", clustersSet.Name)
+			// Return the first cluster that can accommodate at least one replica.
+			return clustersSet.Name, nil
 		}
 	}
+	return "", fmt.Errorf("no cluster found that can accommodate at least one replica for the resource %s/%s", spec.Resource.Namespace, spec.Resource.Name)
 }
 
 // SelectClusters selects clusters based on the placement and resource binding spec.

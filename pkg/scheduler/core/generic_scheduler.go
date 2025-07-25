@@ -98,15 +98,15 @@ func (g *genericScheduler) Schedule(
 		// If the resource has components, we need to handle them separately.
 		klog.V(4).Infof("Resource has components, handling component replicas.")
 
-		cluster, err := g.selectCluster(clustersScore, spec.Placement, spec)
+		clusterName, err := g.selectCluster(clustersScore, spec.Placement, spec)
 		if err != nil {
 			return result, fmt.Errorf("failed to select clusters for components: %w", err)
 		}
-		klog.V(4).Infof("Selected cluster for components: %v", cluster)
+		klog.V(4).Infof("Selected cluster for components: %s", clusterName)
 
 		result.SuggestedClusters = []workv1alpha2.TargetCluster{
 			{
-				Name:     cluster.Name,
+				Name:     clusterName,
 				Replicas: 1,
 			},
 		}
@@ -202,7 +202,7 @@ func (g *genericScheduler) prioritizeClusters(
 
 // scheduleWithComponents handles the scheduling of resources with components.
 func (g *genericScheduler) selectCluster(clustersScore framework.ClusterScoreList,
-	placement *policyv1alpha1.Placement, spec *workv1alpha2.ResourceBindingSpec) (*clusterv1alpha1.Cluster, error) {
+	placement *policyv1alpha1.Placement, spec *workv1alpha2.ResourceBindingSpec) (string, error) {
 	return SelectCluster(clustersScore, placement, spec)
 }
 

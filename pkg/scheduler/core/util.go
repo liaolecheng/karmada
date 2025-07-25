@@ -113,11 +113,11 @@ func calAvailableComponentSets(clusters []*clusterv1alpha1.Cluster, spec *workv1
 	}
 
 	// Get the minimum value of MaxAvailableComponentSets in terms of all estimators.
-	estimators := estimatorclient.GetMultiComponentEstimator()
+	estimators := estimatorclient.GetMultiComponentEstimators()
 	ctx := context.WithValue(context.TODO(), util.ContextKeyObject,
 		fmt.Sprintf("kind=%s, name=%s/%s", spec.Resource.Kind, spec.Resource.Namespace, spec.Resource.Name))
 	for name, estimator := range estimators {
-		res, err := estimator.MaxAvailableComponentSets(ctx, clusters, spec.ReplicaRequirements)
+		res, err := estimator.MaxAvailableComponentSets(ctx, clusters, spec.Components)
 		if err != nil {
 			klog.Errorf("Max cluster available replicas error: %v", err)
 			continue

@@ -31,12 +31,18 @@ const UnauthenticReplica = -1
 
 var (
 	replicaEstimators              = map[string]ReplicaEstimator{}
+	multiComponentEstimators       = map[string]MultiComponentEstimator{}
 	unschedulableReplicaEstimators = map[string]UnschedulableReplicaEstimator{}
 )
 
 // ReplicaEstimator is an estimator which estimates the maximum replicas that can be applied to the target cluster.
 type ReplicaEstimator interface {
 	MaxAvailableReplicas(ctx context.Context, clusters []*clusterv1alpha1.Cluster, replicaRequirements *workv1alpha2.ReplicaRequirements) ([]workv1alpha2.TargetCluster, error)
+}
+
+// MultiComponentEstimator is an estimator which estimates the maximum replicas for multiple components in a workload.
+type MultiComponentEstimator interface {
+	MaxAvailableComponentSets(ctx context.Context, clusters []*clusterv1alpha1.Cluster, componentRequirements []workv1alpha2.ComponentRequirements) ([]workv1alpha2.TargetCluster, error)
 }
 
 // UnschedulableReplicaEstimator is an estimator which estimates the unschedulable replicas which belong to a specified workload.
@@ -47,6 +53,10 @@ type UnschedulableReplicaEstimator interface {
 // GetReplicaEstimators returns all replica estimators.
 func GetReplicaEstimators() map[string]ReplicaEstimator {
 	return replicaEstimators
+}
+
+func GetMultiComponentEstimators() map[string]MultiComponentEstimator {
+	return multiComponentEstimators
 }
 
 // GetUnschedulableReplicaEstimators returns all unschedulable replica estimators.
