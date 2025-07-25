@@ -108,6 +108,22 @@ func (e *CustomizedInterpreter) GetReplicas(ctx context.Context, attributes *req
 	return response.Replicas, response.ReplicaRequirements, matched, nil
 }
 
+// GetComponentReplicas extracts the resource requirements for multiple components from the given object.
+func (e *CustomizedInterpreter) GetComponentReplicas(ctx context.Context, attributes *request.Attributes) (components []workv1alpha2.ComponentRequirements, matched bool, err error) {
+	klog.V(4).Infof("Get component replicas for object: %v %s/%s with webhook interpreter.",
+		attributes.Object.GroupVersionKind(), attributes.Object.GetNamespace(), attributes.Object.GetName())
+	var response *request.ResponseAttributes
+	response, matched, err = e.interpret(ctx, attributes)
+	if err != nil {
+		return
+	}
+	if !matched {
+		return
+	}
+
+	return response.Components, matched, nil
+}
+
 // Patch returns the Unstructured object that applied patch response that based on the RequestAttributes.
 // return matched value to indicate whether there is a matching hook.
 func (e *CustomizedInterpreter) Patch(ctx context.Context, attributes *request.Attributes) (obj *unstructured.Unstructured, matched bool, err error) {

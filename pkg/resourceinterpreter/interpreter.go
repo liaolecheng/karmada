@@ -46,6 +46,15 @@ type ResourceInterpreter interface {
 	// GetReplicas returns the desired replicas of the object as well as the requirements of each replica.
 	GetReplicas(object *unstructured.Unstructured) (replica int32, replicaRequires *workv1alpha2.ReplicaRequirements, err error)
 
+	// GetComponentReplicas extracts the resource requirements for multiple components from the given object.
+	// This interpreter hook is designed for CRDs with multiple components (e.g., FlinkDeployment), but can
+	// also be used for single-component resources like Deployment.
+	// If implemented, the controller will use this hook to obtain per-component replica and resource
+	// requirements, and will not call GetReplicas.
+	// If not implemented, the controller will fall back to GetReplicas for backward compatibility.
+	// This hook will only be called when the feature gate 'MultiplePodTemplatesScheduling' is enabled.
+	GetComponentReplicas(object *unstructured.Unstructured) (components []workv1alpha2.ComponentRequirements, err error)
+
 	// ReviseReplica revises the replica of the given object.
 	ReviseReplica(object *unstructured.Unstructured, replica int64) (*unstructured.Unstructured, error)
 
@@ -145,6 +154,39 @@ func (i *customResourceInterpreterImpl) GetReplicas(object *unstructured.Unstruc
 
 	replica, requires, err = i.defaultInterpreter.GetReplicas(object)
 	return
+}
+
+// GetComponentReplicas extracts the resource requirements for multiple components from the given object.
+func (i *customResourceInterpreterImpl) GetComponentReplicas(object *unstructured.Unstructured) (components []workv1alpha2.ComponentRequirements, err error) {
+	var hookEnabled bool
+
+	components, hookEnabled, err = i.configurableInterpreter.GetComponentReplicas(object)
+	if err != nil {
+		return
+	}
+	if hookEnabled {
+		return
+	}
+
+	components, hookEnabled, err = i.customizedInterpreter.GetComponentReplicas(context.TODO(), &request.Attributes{
+		Operation: configv1alpha1.InterpreterOperationInterpretComponentReplica,
+		Object:    object,
+	})
+	if err != nil {
+		return
+	}
+	if hookEnabled {
+		return
+	}
+	components, hookEnabled, err = i.thirdpartyInterpreter.GetComponentReplicas(object)
+	if err != nil {
+		return
+	}
+	if hookEnabled {
+		return
+	}
+
+	return i.defaultInterpreter.GetComponentReplicas(object)
 }
 
 // ReviseReplica revises the replica of the given object.

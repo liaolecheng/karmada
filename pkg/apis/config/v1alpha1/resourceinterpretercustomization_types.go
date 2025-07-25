@@ -97,6 +97,10 @@ type CustomizationRules struct {
 	// +optional
 	ReplicaResource *ReplicaResourceRequirement `json:"replicaResource,omitempty"`
 
+	// ComponentReplicaResource describes the rules for getting component replicas
+	// +optional
+	ComponentReplicaResource *ComponentReplicaResourceRequirement `json:"componentReplicaResource,omitempty"`
+
 	// ReplicaRevision describes the rules for Karmada to revise the resource's replica.
 	// It would be useful for those CRD resources that declare workload types like
 	// Deployment.
@@ -199,6 +203,25 @@ type ReplicaResourceRequirement struct {
 	//   - requirement: the resource required by each replica expressed with a
 	//       ResourceBindingSpec.ReplicaRequirements.
 	// The returned values will be set into a ResourceBinding or ClusterResourceBinding.
+	// +required
+	LuaScript string `json:"luaScript"`
+}
+
+// ComponentReplicaResourceRequirement holds the scripts for getting the desired component replicas
+// as well as the resource requirement of each component replica.
+type ComponentReplicaResourceRequirement struct {
+	// LuaScript holds the Lua script that is used to discover the component replicas
+	// as well as resource requirements.
+
+	//	// The content of the LuaScript needs to be a whole function including both
+	// declaration and implementation.
+	//	// The parameters will be supplied by the system:
+	//   - desiredObj: the object represents the configuration to be applied
+	//       to the member cluster.
+	// The function expects one return value:
+	//   - components: a slice of ComponentRequirements, each representing a component
+	//       and its desired replicas.
+	// The returned value will be set into a ResourceBinding or ClusterResourceBinding.
 	// +required
 	LuaScript string `json:"luaScript"`
 }

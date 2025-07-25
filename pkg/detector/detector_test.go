@@ -1056,6 +1056,10 @@ func (m *mockResourceInterpreter) GetReplicas(_ *unstructured.Unstructured) (int
 	return 0, nil, nil
 }
 
+func (m *mockResourceInterpreter) GetComponentReplicas(_ *unstructured.Unstructured) ([]workv1alpha2.ComponentRequirements, error) {
+	return nil, nil
+}
+
 func (m *mockResourceInterpreter) ReviseReplica(object *unstructured.Unstructured, _ int64) (*unstructured.Unstructured, error) {
 	return object, nil
 }

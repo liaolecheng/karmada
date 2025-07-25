@@ -32,13 +32,14 @@ import (
 // DefaultInterpreter contains all default operation interpreter factory
 // for interpreting common resource.
 type DefaultInterpreter struct {
-	replicaHandlers         map[schema.GroupVersionKind]replicaInterpreter
-	reviseReplicaHandlers   map[schema.GroupVersionKind]reviseReplicaInterpreter
-	retentionHandlers       map[schema.GroupVersionKind]retentionInterpreter
-	aggregateStatusHandlers map[schema.GroupVersionKind]aggregateStatusInterpreter
-	dependenciesHandlers    map[schema.GroupVersionKind]dependenciesInterpreter
-	reflectStatusHandlers   map[schema.GroupVersionKind]reflectStatusInterpreter
-	healthHandlers          map[schema.GroupVersionKind]healthInterpreter
+	replicaHandlers          map[schema.GroupVersionKind]replicaInterpreter
+	ComponentReplicaHandlers map[schema.GroupVersionKind]componentReplicaInterpreter
+	reviseReplicaHandlers    map[schema.GroupVersionKind]reviseReplicaInterpreter
+	retentionHandlers        map[schema.GroupVersionKind]retentionInterpreter
+	aggregateStatusHandlers  map[schema.GroupVersionKind]aggregateStatusInterpreter
+	dependenciesHandlers     map[schema.GroupVersionKind]dependenciesInterpreter
+	reflectStatusHandlers    map[schema.GroupVersionKind]reflectStatusInterpreter
+	healthHandlers           map[schema.GroupVersionKind]healthInterpreter
 }
 
 // NewDefaultInterpreter return a new DefaultInterpreter.
@@ -96,6 +97,15 @@ func (e *DefaultInterpreter) GetReplicas(object *unstructured.Unstructured) (int
 	handler, exist := e.replicaHandlers[object.GroupVersionKind()]
 	if !exist {
 		return 0, &workv1alpha2.ReplicaRequirements{}, fmt.Errorf("default %s interpreter for %q not found", configv1alpha1.InterpreterOperationInterpretReplica, object.GroupVersionKind())
+	}
+	return handler(object)
+}
+
+func (e *DefaultInterpreter) GetComponentReplicas(object *unstructured.Unstructured) ([]workv1alpha2.ComponentRequirements, error) {
+	klog.V(4).Infof("Get component replicas for object: %v %s/%s with build-in interpreter.", object.GroupVersionKind(), object.GetNamespace(), object.GetName())
+	handler, exist := e.ComponentReplicaHandlers[object.GroupVersionKind()]
+	if !exist {
+		return nil, fmt.Errorf("default %s interpreter for %q not found", configv1alpha1.InterpreterOperationInterpretComponentReplica, object.GroupVersionKind())
 	}
 	return handler(object)
 }

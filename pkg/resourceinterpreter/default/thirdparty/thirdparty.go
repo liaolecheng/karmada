@@ -85,6 +85,24 @@ func (p *ConfigurableInterpreter) GetReplicas(object *unstructured.Unstructured)
 	return
 }
 
+func (p *ConfigurableInterpreter) GetComponentReplicas(object *unstructured.Unstructured) (components []workv1alpha2.ComponentRequirements, enabled bool, err error) {
+	klog.V(4).Infof("Get component replicas for object: %v %s/%s with thirdparty configurable interpreter.", object.GroupVersionKind(), object.GetNamespace(), object.GetName())
+
+	customAccessor, enabled := p.getCustomAccessor(object.GroupVersionKind())
+	if !enabled {
+		return
+	}
+
+	script := customAccessor.GetComponentReplicaResourceLuaScript()
+	if len(script) == 0 {
+		enabled = false
+		return
+	}
+
+	components, err = p.luaVM.GetComponentReplicas(object, script)
+	return
+}
+
 // ReviseReplica revises the replica of the given object.
 func (p *ConfigurableInterpreter) ReviseReplica(object *unstructured.Unstructured, replica int64) (revised *unstructured.Unstructured, enabled bool, err error) {
 	klog.V(4).Infof("Revise replicas for object: %v %s/%s with thirdparty configurable interpreter.", object.GroupVersionKind(), object.GetNamespace(), object.GetName())

@@ -62,6 +62,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/karmada-io/karmada/pkg/apis/cluster/v1alpha1.ResourceModel":                              schema_pkg_apis_cluster_v1alpha1_ResourceModel(ref),
 		"github.com/karmada-io/karmada/pkg/apis/cluster/v1alpha1.ResourceModelRange":                         schema_pkg_apis_cluster_v1alpha1_ResourceModelRange(ref),
 		"github.com/karmada-io/karmada/pkg/apis/cluster/v1alpha1.ResourceSummary":                            schema_pkg_apis_cluster_v1alpha1_ResourceSummary(ref),
+		"github.com/karmada-io/karmada/pkg/apis/config/v1alpha1.ComponentReplicaResourceRequirement":         schema_pkg_apis_config_v1alpha1_ComponentReplicaResourceRequirement(ref),
 		"github.com/karmada-io/karmada/pkg/apis/config/v1alpha1.CustomizationRules":                          schema_pkg_apis_config_v1alpha1_CustomizationRules(ref),
 		"github.com/karmada-io/karmada/pkg/apis/config/v1alpha1.CustomizationTarget":                         schema_pkg_apis_config_v1alpha1_CustomizationTarget(ref),
 		"github.com/karmada-io/karmada/pkg/apis/config/v1alpha1.DependencyInterpretation":                    schema_pkg_apis_config_v1alpha1_DependencyInterpretation(ref),
@@ -178,6 +179,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/karmada-io/karmada/pkg/apis/work/v1alpha2.BindingSnapshot":                               schema_pkg_apis_work_v1alpha2_BindingSnapshot(ref),
 		"github.com/karmada-io/karmada/pkg/apis/work/v1alpha2.ClusterResourceBinding":                        schema_pkg_apis_work_v1alpha2_ClusterResourceBinding(ref),
 		"github.com/karmada-io/karmada/pkg/apis/work/v1alpha2.ClusterResourceBindingList":                    schema_pkg_apis_work_v1alpha2_ClusterResourceBindingList(ref),
+		"github.com/karmada-io/karmada/pkg/apis/work/v1alpha2.ComponentRequirements":                         schema_pkg_apis_work_v1alpha2_ComponentRequirements(ref),
 		"github.com/karmada-io/karmada/pkg/apis/work/v1alpha2.GracefulEvictionTask":                          schema_pkg_apis_work_v1alpha2_GracefulEvictionTask(ref),
 		"github.com/karmada-io/karmada/pkg/apis/work/v1alpha2.NodeClaim":                                     schema_pkg_apis_work_v1alpha2_NodeClaim(ref),
 		"github.com/karmada-io/karmada/pkg/apis/work/v1alpha2.ObjectReference":                               schema_pkg_apis_work_v1alpha2_ObjectReference(ref),
@@ -2065,6 +2067,28 @@ func schema_pkg_apis_cluster_v1alpha1_ResourceSummary(ref common.ReferenceCallba
 	}
 }
 
+func schema_pkg_apis_config_v1alpha1_ComponentReplicaResourceRequirement(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "ComponentReplicaResourceRequirement holds the scripts for getting the desired component replicas as well as the resource requirement of each component replica.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"luaScript": {
+						SchemaProps: spec.SchemaProps{
+							Description: "// The content of the LuaScript needs to be a whole function including both\ndeclaration and implementation.\n\t// The parameters will be supplied by the system:\n  - desiredObj: the object represents the configuration to be applied\n      to the member cluster.\nThe function expects one return value:\n  - components: a slice of ComponentRequirements, each representing a component\n      and its desired replicas.\nThe returned value will be set into a ResourceBinding or ClusterResourceBinding.",
+							Default:     "",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+				},
+				Required: []string{"luaScript"},
+			},
+		},
+	}
+}
+
 func schema_pkg_apis_config_v1alpha1_CustomizationRules(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -2647,6 +2671,20 @@ func schema_pkg_apis_config_v1alpha1_ResourceInterpreterResponse(ref common.Refe
 							Format:      "int32",
 						},
 					},
+					"components": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Components represents the component requirements. This is a list of ComponentRequirements, each representing a component and its desired replicas. Required if InterpreterOperation is InterpreterOperationInterpretComponentReplica.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: map[string]interface{}{},
+										Ref:     ref("github.com/karmada-io/karmada/pkg/apis/work/v1alpha2.ComponentRequirements"),
+									},
+								},
+							},
+						},
+					},
 					"dependencies": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Dependencies represents the reference of dependencies object. Required if InterpreterOperation is InterpreterOperationInterpretDependency.",
@@ -2679,7 +2717,7 @@ func schema_pkg_apis_config_v1alpha1_ResourceInterpreterResponse(ref common.Refe
 			},
 		},
 		Dependencies: []string{
-			"github.com/karmada-io/karmada/pkg/apis/config/v1alpha1.DependentObjectReference", "github.com/karmada-io/karmada/pkg/apis/config/v1alpha1.RequestStatus", "github.com/karmada-io/karmada/pkg/apis/work/v1alpha2.ReplicaRequirements", "k8s.io/apimachinery/pkg/runtime.RawExtension"},
+			"github.com/karmada-io/karmada/pkg/apis/config/v1alpha1.DependentObjectReference", "github.com/karmada-io/karmada/pkg/apis/config/v1alpha1.RequestStatus", "github.com/karmada-io/karmada/pkg/apis/work/v1alpha2.ComponentRequirements", "github.com/karmada-io/karmada/pkg/apis/work/v1alpha2.ReplicaRequirements", "k8s.io/apimachinery/pkg/runtime.RawExtension"},
 	}
 }
 
@@ -7184,6 +7222,41 @@ func schema_pkg_apis_work_v1alpha2_ClusterResourceBindingList(ref common.Referen
 	}
 }
 
+func schema_pkg_apis_work_v1alpha2_ComponentRequirements(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "ComponentRequirements represents the requirements for a specific component in a multi-component resource.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"name": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Name of this component",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"replicas": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Replicas represents the replica number of the resource's component",
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
+					"replicaRequirements": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ReplicaRequirements represents the requirements required by each replica for this component.",
+							Ref:         ref("github.com/karmada-io/karmada/pkg/apis/work/v1alpha2.ReplicaRequirements"),
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"github.com/karmada-io/karmada/pkg/apis/work/v1alpha2.ReplicaRequirements"},
+	}
+}
+
 func schema_pkg_apis_work_v1alpha2_GracefulEvictionTask(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -7589,6 +7662,20 @@ func schema_pkg_apis_work_v1alpha2_ResourceBindingSpec(ref common.ReferenceCallb
 							Format:      "int32",
 						},
 					},
+					"components": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Components defines the requirements of individual components of the resource. This field is introduced to support multi-component workloads and will eventually replace the legacy fields above. When the MultiplePodTemplatesScheduling feature gate is enabled, both legacy(ReplicaRequirements, Replicas) and Components will be populated for backward compatibility.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: map[string]interface{}{},
+										Ref:     ref("github.com/karmada-io/karmada/pkg/apis/work/v1alpha2.ComponentRequirements"),
+									},
+								},
+							},
+						},
+					},
 					"clusters": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Clusters represents target member clusters where the resource to be deployed.",
@@ -7687,7 +7774,7 @@ func schema_pkg_apis_work_v1alpha2_ResourceBindingSpec(ref common.ReferenceCallb
 			},
 		},
 		Dependencies: []string{
-			"github.com/karmada-io/karmada/pkg/apis/policy/v1alpha1.FailoverBehavior", "github.com/karmada-io/karmada/pkg/apis/policy/v1alpha1.Placement", "github.com/karmada-io/karmada/pkg/apis/work/v1alpha2.BindingSnapshot", "github.com/karmada-io/karmada/pkg/apis/work/v1alpha2.GracefulEvictionTask", "github.com/karmada-io/karmada/pkg/apis/work/v1alpha2.ObjectReference", "github.com/karmada-io/karmada/pkg/apis/work/v1alpha2.ReplicaRequirements", "github.com/karmada-io/karmada/pkg/apis/work/v1alpha2.SchedulePriority", "github.com/karmada-io/karmada/pkg/apis/work/v1alpha2.Suspension", "github.com/karmada-io/karmada/pkg/apis/work/v1alpha2.TargetCluster", "k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
+			"github.com/karmada-io/karmada/pkg/apis/policy/v1alpha1.FailoverBehavior", "github.com/karmada-io/karmada/pkg/apis/policy/v1alpha1.Placement", "github.com/karmada-io/karmada/pkg/apis/work/v1alpha2.BindingSnapshot", "github.com/karmada-io/karmada/pkg/apis/work/v1alpha2.ComponentRequirements", "github.com/karmada-io/karmada/pkg/apis/work/v1alpha2.GracefulEvictionTask", "github.com/karmada-io/karmada/pkg/apis/work/v1alpha2.ObjectReference", "github.com/karmada-io/karmada/pkg/apis/work/v1alpha2.ReplicaRequirements", "github.com/karmada-io/karmada/pkg/apis/work/v1alpha2.SchedulePriority", "github.com/karmada-io/karmada/pkg/apis/work/v1alpha2.Suspension", "github.com/karmada-io/karmada/pkg/apis/work/v1alpha2.TargetCluster", "k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
 	}
 }
 

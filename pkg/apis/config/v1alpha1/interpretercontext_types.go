@@ -118,6 +118,12 @@ type ResourceInterpreterResponse struct {
 	// +optional
 	Replicas *int32 `json:"replicas,omitempty"`
 
+	// Components represents the component requirements.
+	// This is a list of ComponentRequirements, each representing a component and its desired replicas.
+	// Required if InterpreterOperation is InterpreterOperationInterpretComponentReplica.
+	// +optional
+	Components []workv1alpha2.ComponentRequirements `json:"components,omitempty"`
+
 	// Dependencies represents the reference of dependencies object.
 	// Required if InterpreterOperation is InterpreterOperationInterpretDependency.
 	// +optional

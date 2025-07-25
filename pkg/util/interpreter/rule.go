@@ -31,6 +31,7 @@ import (
 var AllResourceInterpreterCustomizationRules = []Rule{
 	&retentionRule{},
 	&replicaResourceRule{},
+	&componentReplicaResourceRule{},
 	&replicaRevisionRule{},
 	&statusReflectionRule{},
 	&statusAggregationRule{},
@@ -143,6 +144,63 @@ func (r *replicaResourceRule) Run(interpreter *declarative.ConfigurableInterpret
 		return newRuleResultWithError(fmt.Errorf("rule is not enabled"))
 	}
 	return newRuleResult().add("replica", replica).add("requires", requires)
+}
+
+type componentReplicaResourceRule struct {
+}
+
+func (r *componentReplicaResourceRule) Name() string {
+	return string(configv1alpha1.InterpreterOperationInterpretComponentReplica)
+}
+
+func (r *componentReplicaResourceRule) Document() string {
+	return `This rule is used to discover the component replicas of a resource.
+The script should implement a function as follows:
+function GetComponentReplicas(desiredObj)
+  components = {}
+  for _, component in pairs(desiredObj.spec.template.spec.containers) do
+	local componentName = component.name
+	local replica = component.replicas or 1
+	local resourceRequirements = component.resources or {}
+	components[componentName] = {
+	  replicas = replica,
+	  resources = resourceRequirements,
+	}
+  end`
+}
+
+func (r *componentReplicaResourceRule) GetScript(c *configv1alpha1.ResourceInterpreterCustomization) string {
+	if c.Spec.Customizations.ComponentReplicaResource != nil {
+		return c.Spec.Customizations.ComponentReplicaResource.LuaScript
+	}
+	return ""
+}
+
+func (r *componentReplicaResourceRule) SetScript(c *configv1alpha1.ResourceInterpreterCustomization, script string) {
+	if script == "" {
+		c.Spec.Customizations.ComponentReplicaResource = nil
+		return
+	}
+
+	if c.Spec.Customizations.ComponentReplicaResource == nil {
+		c.Spec.Customizations.ComponentReplicaResource = &configv1alpha1.ComponentReplicaResourceRequirement{}
+	}
+	c.Spec.Customizations.ReplicaResource.LuaScript = script
+}
+
+func (r *componentReplicaResourceRule) Run(interpreter *declarative.ConfigurableInterpreter, args RuleArgs) *RuleResult {
+	obj, err := args.getObjectOrError()
+	if err != nil {
+		return newRuleResultWithError(err)
+	}
+	components, enabled, err := interpreter.GetComponentReplicas(obj)
+	if err != nil {
+		return newRuleResultWithError(err)
+	}
+	if !enabled {
+		return newRuleResultWithError(fmt.Errorf("rule is not enabled"))
+	}
+	return newRuleResult().add("components", components)
 }
 
 type replicaRevisionRule struct {

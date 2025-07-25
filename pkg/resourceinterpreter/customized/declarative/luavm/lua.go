@@ -154,6 +154,22 @@ func (vm *VM) GetReplicas(obj *unstructured.Unstructured, script string) (replic
 	return
 }
 
+// GetComponentReplicas extracts the resource requirements for multiple components from the given object by lua script.
+func (vm *VM) GetComponentReplicas(obj *unstructured.Unstructured, script string) (components []workv1alpha2.ComponentRequirements, err error) {
+	results, err := vm.RunScript(script, "GetComponentReplicas", 1, obj)
+	if err != nil {
+		return nil, err
+	}
+
+	luaResult := results[0]
+	if luaResult.Type() != lua.LTTable {
+		return nil, fmt.Errorf("expect the returned requires type is table but got %s", luaResult.Type())
+	}
+
+	err = ConvertLuaResultInto(luaResult.(*lua.LTable), &components)
+	return
+}
+
 // ReviseReplica revises the replica of the given object by lua.
 func (vm *VM) ReviseReplica(object *unstructured.Unstructured, replica int64, script string) (*unstructured.Unstructured, error) {
 	results, err := vm.RunScript(script, "ReviseReplica", 1, object, replica)

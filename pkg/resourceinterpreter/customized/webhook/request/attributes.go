@@ -39,6 +39,7 @@ type ResponseAttributes struct {
 	Status              configv1alpha1.RequestStatus
 	Replicas            int32
 	ReplicaRequirements *workv1alpha2.ReplicaRequirements
+	Components          []workv1alpha2.ComponentRequirements
 	Dependencies        []configv1alpha1.DependentObjectReference
 	Patch               []byte
 	PatchType           configv1alpha1.PatchType

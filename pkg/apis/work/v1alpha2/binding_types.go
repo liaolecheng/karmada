@@ -86,6 +86,13 @@ type ResourceBindingSpec struct {
 	// +optional
 	Replicas int32 `json:"replicas,omitempty"`
 
+	// Components defines the requirements of individual components of the resource.
+	// This field is introduced to support multi-component workloads and will eventually replace the legacy fields above.
+	// When the MultiplePodTemplatesScheduling feature gate is enabled, both legacy(ReplicaRequirements, Replicas)
+	// and Components will be populated for backward compatibility.
+	// +optional
+	Components []ComponentRequirements `json:"components,omitempty"` // new field
+
 	// Clusters represents target member clusters where the resource to be deployed.
 	// +optional
 	Clusters []TargetCluster `json:"clusters,omitempty"`
@@ -165,6 +172,22 @@ type ResourceBindingSpec struct {
 	SchedulePriority *SchedulePriority `json:"schedulePriority,omitempty"`
 }
 
+// ComponentRequirements represents the requirements for a specific component in a multi-component resource.
+type ComponentRequirements struct {
+	// Name of this component
+	Name string `json:"name,omitempty"`
+
+	// Replicas represents the replica number of the resource's component
+	// +optional
+	Replicas int32 `json:"replicas,omitempty"`
+
+	// ReplicaRequirements represents the requirements required by each replica for this component.
+	// +optional
+	ReplicaRequirements *ReplicaRequirements `json:"replicaRequirements,omitempty"`
+
+	// Additional fields may be added in the future to support more complex requirements.
+}
+
 // ObjectReference contains enough information to locate the referenced object inside current cluster.
 type ObjectReference struct {
 	// APIVersion represents the API version of the referent.
@@ -210,6 +233,8 @@ type ReplicaRequirements struct {
 	// PriorityClassName represents the resources priorityClassName
 	// +optional
 	PriorityClassName string `json:"priorityClassName,omitempty"`
+
+	// Additional fields may be added in the future to support more complex requirements.
 }
 
 // NodeClaim represents the node claim HardNodeAffinity, NodeSelector and Tolerations required by each replica.

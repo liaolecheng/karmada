@@ -1,0 +1,41 @@
+apiVersion: config.karmada.io/v1alpha1
+kind: ResourceInterpreterCustomization
+metadata:
+  name: flink-deployment-interpreter
+spec:
+  target:
+    apiVersion: flink.apache.org/v1beta1
+    kind: FlinkDeployment
+  customizations:
+    componentReplicaResource:
+      luaScript: >
+        function GetComponentReplicas(obj)
+          local components = {}
+          local jobManagerComponent = {
+            name = obj.metadata.name .. "-jobmanager",
+            replicas = 1,
+            replicaRequirements = {
+              resourceRequest = {
+                cpu = obj.spec.jobManager.resource.cpu or 1,
+                memory = obj.spec.jobManager.resource.memory or "2048m"
+              },
+              namespace = obj.metadata.namespace or "default"
+            }
+          }
+          table.insert(components, jobManagerComponent)
+          local taskManagerComponent = {
+            name = obj.metadata.name .. "-taskmanager",
+            replicas = obj.spec.taskManager.replicas or 1,
+            replicaRequirements = {
+              resourceRequest = {
+                cpu = obj.spec.taskManager.resource.cpu or 1,
+                memory = obj.spec.taskManager.resource.memory or "2048m"
+              },
+              namespace = obj.metadata.namespace or "default"
+            }
+          }
+          table.insert(components, taskManagerComponent)
+          return components
+        end
+
+    

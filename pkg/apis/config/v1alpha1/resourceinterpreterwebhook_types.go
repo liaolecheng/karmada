@@ -124,6 +124,10 @@ const (
 	// Only necessary for those resource types that have replica declaration, like Deployment or similar custom resources.
 	InterpreterOperationInterpretReplica InterpreterOperation = "InterpretReplica"
 
+	// InterpreterOperationInterpretComponent indicates that karmada want to figure out the component requirements of a specific object.
+	// Only necessary for those resource types that have component requirements.
+	InterpreterOperationInterpretComponentReplica InterpreterOperation = "InterpretComponentReplica"
+
 	// InterpreterOperationReviseReplica indicates that karmada request webhook to modify the replica.
 	InterpreterOperationReviseReplica InterpreterOperation = "ReviseReplica"
 
