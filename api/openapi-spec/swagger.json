@@ -18469,10 +18469,28 @@
         }
       }
     },
+    "com.github.karmada-io.karmada.pkg.apis.config.v1alpha1.ComponentReplicaResourceRequirement": {
+      "description": "ComponentReplicaResourceRequirement holds the scripts for getting the desired component replicas as well as the resource requirement of each component replica.",
+      "type": "object",
+      "required": [
+        "luaScript"
+      ],
+      "properties": {
+        "luaScript": {
+          "description": "// The content of the LuaScript needs to be a whole function including both\ndeclaration and implementation.\n\t// The parameters will be supplied by the system:\n  - desiredObj: the object represents the configuration to be applied\n      to the member cluster.\nThe function expects one return value:\n  - components: a slice of ComponentRequirements, each representing a component\n      and its desired replicas.\nThe returned value will be set into a ResourceBinding or ClusterResourceBinding.",
+          "type": "string",
+          "default": ""
+        }
+      }
+    },
     "com.github.karmada-io.karmada.pkg.apis.config.v1alpha1.CustomizationRules": {
       "description": "CustomizationRules describes the interpretation rules.",
       "type": "object",
       "properties": {
+        "componentReplicaResource": {
+          "description": "ComponentReplicaResource describes the rules for getting component replicas",
+          "$ref": "#/definitions/com.github.karmada-io.karmada.pkg.apis.config.v1alpha1.ComponentReplicaResourceRequirement"
+        },
         "dependencyInterpretation": {
           "description": "DependencyInterpretation describes the rules for Karmada to analyze the dependent resources. Karmada provides built-in rules for several standard Kubernetes types, see: https://karmada.io/docs/userguide/globalview/customizing-resource-interpreter/#interpretdependency If DependencyInterpretation is set, the built-in rules will be ignored.",
           "$ref": "#/definitions/com.github.karmada-io.karmada.pkg.apis.config.v1alpha1.DependencyInterpretation"

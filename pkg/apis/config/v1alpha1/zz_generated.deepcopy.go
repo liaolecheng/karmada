@@ -56,6 +56,11 @@ func (in *CustomizationRules) DeepCopyInto(out *CustomizationRules) {
 		*out = new(ReplicaResourceRequirement)
 		**out = **in
 	}
+	if in.ComponentReplicaResource != nil {
+		in, out := &in.ComponentReplicaResource, &out.ComponentReplicaResource
+		*out = new(ComponentReplicaResourceRequirement)
+		**out = **in
+	}
 	if in.ReplicaRevision != nil {
 		in, out := &in.ReplicaRevision, &out.ReplicaRevision
 		*out = new(ReplicaRevision)

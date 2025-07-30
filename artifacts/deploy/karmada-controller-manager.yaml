@@ -6,7 +6,7 @@ metadata:
   labels:
     app: karmada-controller-manager
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app: karmada-controller-manager
@@ -24,7 +24,7 @@ spec:
           securityContext:
             allowPrivilegeEscalation: false
             privileged: false
-          image: docker.io/karmada/karmada-controller-manager:latest
+          image: docker.io/karmada/karmada-controller-manager:dev
           imagePullPolicy: IfNotPresent
           env:
             - name: POD_IP

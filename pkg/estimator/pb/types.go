@@ -117,3 +117,28 @@ type UnschedulableReplicasResponse struct {
 	// +required
 	UnschedulableReplicas int32 `json:"unschedulableReplicas" protobuf:"varint,1,opt,name=unschedulableReplicas"`
 }
+
+// MaxAvailableComponentSetsRequest represents the request sent by the client to estimate the maximum number
+// of full sets of components that can be scheduled.
+type MaxAvailableComponentSetsRequest struct {
+	// Cluster represents the cluster name.
+	Cluster string `json:"cluster" protobuf:"bytes,1,opt,name=cluster"`
+	// Components contains the requirements for each component (pod template) in the workload.
+	Components []ComponentRequirements `json:"components" protobuf:"bytes,2,rep,name=components"`
+}
+
+// ComponentRequirements describes the resource and scheduling requirements for a single component.
+type ComponentRequirements struct {
+	// Name of the component (e.g., "jobmanager", "taskmanager").
+	Name string `json:"name" protobuf:"bytes,1,opt,name=name"`
+	// Resource requirements for each replica of this component.
+	ReplicaRequirements ReplicaRequirements `json:"replicaRequirements" protobuf:"bytes,2,opt,name=replicaRequirements"`
+	// Number of replicas required for this component in a single set.
+	Replicas int32 `json:"replicas" protobuf:"varint,3,opt,name=replicas"`
+}
+
+// MaxAvailableComponentSetsResponse represents the response from the estimator.
+type MaxAvailableComponentSetsResponse struct {
+	// The maximum number of full sets of all components that can be scheduled on the cluster.
+	MaxSets int32 `json:"maxSets" protobuf:"varint,1,opt,name=maxSets"`
+}

@@ -125,9 +125,6 @@ func calAvailableComponentSets(clusters []*clusterv1alpha1.Cluster, spec *workv1
 		klog.V(4).Infof("Invoked MaxAvailableComponentSets of estimator %s for workload(%s, kind=%s, %s): %v", name,
 			spec.Resource.APIVersion, spec.Resource.Kind, spec.Resource.Namespace, res)
 		for i := range res {
-			if res[i].Replicas == estimatorclient.UnauthenticReplica {
-				continue
-			}
 			if availableTargetClusters[i].Name == res[i].Name && availableTargetClusters[i].Replicas > res[i].Replicas {
 				availableTargetClusters[i].Replicas = res[i].Replicas
 			}

@@ -2,7 +2,7 @@
 apiVersion: flink.apache.org/v1beta1
 kind: FlinkDeployment
 metadata:
-  namespace: example-namespace
+  namespace: default
   name: flink-deployment-example
 spec:
   image: flink:1.20

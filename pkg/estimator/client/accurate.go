@@ -33,6 +33,7 @@ import (
 // RegisterSchedulerEstimator will register a SchedulerEstimator.
 func RegisterSchedulerEstimator(se *SchedulerEstimator) {
 	replicaEstimators["scheduler-estimator"] = se
+	multiComponentEstimators["scheduler-estimator"] = se
 	unschedulableReplicaEstimators["scheduler-estimator"] = se
 }
 
@@ -64,6 +65,21 @@ func (se *SchedulerEstimator) MaxAvailableReplicas(
 	}
 	return getClusterReplicasConcurrently(parentCtx, clusterNames, se.timeout, func(ctx context.Context, cluster string) (int32, error) {
 		return se.maxAvailableReplicas(ctx, cluster, replicaRequirements.DeepCopy())
+	})
+}
+
+// MaxAvailableComponentSets estimates the maximum component sets that can be applied to the target cluster.
+func (se *SchedulerEstimator) MaxAvailableComponentSets(
+	ctx context.Context,
+	clusters []*clusterv1alpha1.Cluster,
+	componentRequirements []workv1alpha2.ComponentRequirements,
+) ([]workv1alpha2.TargetCluster, error) {
+	clusterNames := make([]string, len(clusters))
+	for i, cluster := range clusters {
+		clusterNames[i] = cluster.Name
+	}
+	return getClusterReplicasConcurrently(ctx, clusterNames, se.timeout, func(ctx context.Context, cluster string) (int32, error) {
+		return se.maxAvailableComponentSets(ctx, cluster, componentRequirements)
 	})
 }
 
@@ -106,6 +122,38 @@ func (se *SchedulerEstimator) maxAvailableReplicas(ctx context.Context, cluster 
 		return UnauthenticReplica, fmt.Errorf("gRPC request cluster(%s) estimator error when calling MaxAvailableReplicas: %v", cluster, err)
 	}
 	return res.MaxReplicas, nil
+}
+
+func (se *SchedulerEstimator) maxAvailableComponentSets(ctx context.Context, cluster string, componentRequirements []workv1alpha2.ComponentRequirements) (int32, error) {
+	client, err := se.cache.GetClient(cluster)
+	if err != nil {
+		return UnauthenticReplica, err
+	}
+	req := &pb.MaxAvailableComponentSetsRequest{
+		Cluster:    cluster,
+		Components: make([]pb.ComponentRequirements, len(componentRequirements)),
+	}
+	for i, cr := range componentRequirements {
+		req.Components[i].Name = cr.Name
+		req.Components[i].Replicas = cr.Replicas
+		if cr.ReplicaRequirements != nil {
+			req.Components[i].ReplicaRequirements.ResourceRequest = cr.ReplicaRequirements.ResourceRequest
+			req.Components[i].ReplicaRequirements.Namespace = cr.ReplicaRequirements.Namespace
+			req.Components[i].ReplicaRequirements.PriorityClassName = cr.ReplicaRequirements.PriorityClassName
+			if cr.ReplicaRequirements.NodeClaim != nil {
+				req.Components[i].ReplicaRequirements.NodeClaim = &pb.NodeClaim{
+					NodeAffinity: cr.ReplicaRequirements.NodeClaim.HardNodeAffinity,
+					NodeSelector: cr.ReplicaRequirements.NodeClaim.NodeSelector,
+					Tolerations:  cr.ReplicaRequirements.NodeClaim.Tolerations,
+				}
+			}
+		}
+	}
+	res, err := client.MaxAvailableComponentSets(ctx, req)
+	if err != nil {
+		return UnauthenticReplica, fmt.Errorf("gRPC request cluster(%s) estimator error when calling MaxAvailableComponentSets: %v", cluster, err)
+	}
+	return res.MaxSets, nil
 }
 
 func (se *SchedulerEstimator) maxUnscheduableReplicas(

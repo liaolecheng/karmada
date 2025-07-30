@@ -463,6 +463,9 @@ func (d *ResourceDetector) ApplyPolicy(object *unstructured.Unstructured, object
 					"try again later after binding is garbage collected, see https://github.com/karmada-io/karmada/issues/2090")
 			}
 
+			klog.Infof("Debug: Before update: binding.Spec.Components=%d, bindingCopy.Spec.Components=%d",
+				len(binding.Spec.Components), len(bindingCopy.Spec.Components))
+
 			// Just update necessary fields, especially avoid modifying Spec.Clusters which is scheduling result, if already exists.
 			bindingCopy.Annotations = util.DedupeAndMergeAnnotations(bindingCopy.Annotations, binding.Annotations)
 			bindingCopy.Labels = util.DedupeAndMergeLabels(bindingCopy.Labels, binding.Labels)
@@ -471,6 +474,7 @@ func (d *ResourceDetector) ApplyPolicy(object *unstructured.Unstructured, object
 			bindingCopy.Spec.Resource = binding.Spec.Resource
 			bindingCopy.Spec.ReplicaRequirements = binding.Spec.ReplicaRequirements
 			bindingCopy.Spec.Replicas = binding.Spec.Replicas
+			bindingCopy.Spec.Components = binding.Spec.Components
 			bindingCopy.Spec.PropagateDeps = binding.Spec.PropagateDeps
 			bindingCopy.Spec.SchedulerName = binding.Spec.SchedulerName
 			bindingCopy.Spec.Placement = binding.Spec.Placement
@@ -485,6 +489,8 @@ func (d *ResourceDetector) ApplyPolicy(object *unstructured.Unstructured, object
 				bindingCopy.Spec.Suspension.Suspension = binding.Spec.Suspension.Suspension
 			}
 			excludeClusterPolicy(bindingCopy)
+
+			klog.Infof("Debug: After update: bindingCopy.Spec.Components=%d", len(bindingCopy.Spec.Components))
 			return nil
 		})
 		if err != nil {
@@ -496,6 +502,11 @@ func (d *ResourceDetector) ApplyPolicy(object *unstructured.Unstructured, object
 		klog.Errorf("Failed to apply policy(%s) for object: %s. error: %v", policy.Name, objectKey, err)
 		return err
 	}
+
+	klog.Infof("Debug: binding.Spec.Components=%d, bindingCopy.Spec.Components=%d",
+		len(binding.Spec.Components), len(bindingCopy.Spec.Components))
+	klog.Infof("Debug: binding.Spec.Replicas=%d, bindingCopy.Spec.Replicas=%+v",
+		binding.Spec.Replicas, bindingCopy.Spec.Replicas)
 
 	switch operationResult {
 	case controllerutil.OperationResultCreated:
@@ -567,6 +578,7 @@ func (d *ResourceDetector) ApplyClusterPolicy(object *unstructured.Unstructured,
 				bindingCopy.Spec.Resource = binding.Spec.Resource
 				bindingCopy.Spec.ReplicaRequirements = binding.Spec.ReplicaRequirements
 				bindingCopy.Spec.Replicas = binding.Spec.Replicas
+				bindingCopy.Spec.Components = binding.Spec.Components
 				bindingCopy.Spec.PropagateDeps = binding.Spec.PropagateDeps
 				bindingCopy.Spec.SchedulerName = binding.Spec.SchedulerName
 				bindingCopy.Spec.Placement = binding.Spec.Placement
@@ -769,6 +781,17 @@ func (d *ResourceDetector) BuildResourceBinding(object *unstructured.Unstructure
 		}
 		propagationBinding.Spec.Replicas = replicas
 		propagationBinding.Spec.ReplicaRequirements = replicaRequirements
+	}
+
+	if d.ResourceInterpreter.HookEnabled(object.GroupVersionKind(), configv1alpha1.InterpreterOperationInterpretComponentReplica) {
+		klog.Infof("InterpretComponentReplica hook is ENABLED for %s(%s)", object.GroupVersionKind(), object.GetName())
+		components, err := d.ResourceInterpreter.GetComponentReplicas(object)
+		if err != nil {
+			klog.Errorf("Failed to customize component replicas for %s(%s), %v", object.GroupVersionKind(), object.GetName(), err)
+			return nil, err
+		}
+		propagationBinding.Spec.Components = components
+		klog.Infof("Set %d components in propagationBinding for %s", len(components), propagationBinding.Spec.Components[0].Name)
 	}
 
 	if features.FeatureGate.Enabled(features.PriorityBasedScheduling) && policySpec.SchedulePriority != nil {

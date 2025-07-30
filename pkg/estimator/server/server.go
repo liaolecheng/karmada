@@ -223,6 +223,41 @@ func (es *AccurateSchedulerEstimatorServer) MaxAvailableReplicas(ctx context.Con
 	return &pb.MaxAvailableReplicasResponse{MaxReplicas: maxReplicas}, nil
 }
 
+// MaxAvailableComponentSets is the implementation of gRPC interface. It will return the
+// max available component sets that a cluster could accommodate based on its requirements.
+func (es *AccurateSchedulerEstimatorServer) MaxAvailableComponentSets(ctx context.Context, request *pb.MaxAvailableComponentSetsRequest) (response *pb.MaxAvailableComponentSetsResponse, rerr error) {
+	md, ok := metadata.FromIncomingContext(ctx)
+	if !ok {
+		klog.Warningf("No metadata from context.")
+	}
+	var object string
+	if m := md.Get(string(util.ContextKeyObject)); len(m) != 0 {
+		object = m[0]
+	}
+
+	startTime := time.Now()
+
+	klog.V(4).Infof("Begin calculating cluster available component sets of resource(%s), request: %s", object, pretty.Sprint(*request))
+	defer func(start time.Time) {
+		metrics.CountRequests(rerr, metrics.EstimatingTypeMaxAvailableReplicas)
+		metrics.UpdateEstimatingAlgorithmLatency(rerr, metrics.EstimatingTypeMaxAvailableReplicas, metrics.EstimatingStepTotal, start)
+		if rerr != nil {
+			klog.Errorf("Failed to calculate cluster available component sets: %v", rerr)
+			return
+		}
+		klog.V(2).Infof("Finish calculating cluster available component sets of resource(%s), max sets: %d, time elapsed: %s", object, response.MaxSets, time.Since(start))
+	}(startTime)
+
+	if request.Cluster != es.clusterName {
+		return nil, fmt.Errorf("cluster name does not match, got: %s, desire: %s", request.Cluster, es.clusterName)
+	}
+	maxSets, err := es.EstimateComponentSets(ctx, object, request)
+	if err != nil {
+		return nil, fmt.Errorf("failed to estimate component sets: %v", err)
+	}
+	return &pb.MaxAvailableComponentSetsResponse{MaxSets: maxSets}, nil
+}
+
 // GetUnschedulableReplicas is the implementation of gRPC interface. It will return the
 // unschedulable replicas of a workload.
 func (es *AccurateSchedulerEstimatorServer) GetUnschedulableReplicas(ctx context.Context, request *pb.UnschedulableReplicasRequest) (response *pb.UnschedulableReplicasResponse, rerr error) {

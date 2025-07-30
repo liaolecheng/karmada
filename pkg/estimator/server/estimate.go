@@ -27,6 +27,7 @@ import (
 
 	"github.com/karmada-io/karmada/pkg/estimator/pb"
 	nodeutil "github.com/karmada-io/karmada/pkg/estimator/server/nodes"
+	"github.com/karmada-io/karmada/pkg/estimator/server/pack"
 	"github.com/karmada-io/karmada/pkg/util"
 	schedcache "github.com/karmada-io/karmada/pkg/util/lifted/scheduler/cache"
 	"github.com/karmada-io/karmada/pkg/util/lifted/scheduler/framework"
@@ -109,4 +110,41 @@ func (es *AccurateSchedulerEstimatorServer) nodeMaxAvailableReplica(node *framew
 	// number manually which is the upper bound of this node available replicas.
 	rest.AllowedPodNumber = util.MaxInt64(rest.AllowedPodNumber-int64(len(node.Pods)), 0)
 	return int32(rest.MaxDivided(rl)) // #nosec G115: integer overflow conversion int64 -> int32
+}
+
+func (es *AccurateSchedulerEstimatorServer) EstimateComponentSets(ctx context.Context, object string, request *pb.MaxAvailableComponentSetsRequest) (int32, error) {
+	trace := utiltrace.New("Estimating", utiltrace.Field{Key: "namespacedName", Value: object})
+	defer trace.LogIfLong(100 * time.Millisecond)
+
+	snapShot := schedcache.NewEmptySnapshot()
+	if err := es.Cache.UpdateSnapshot(snapShot); err != nil {
+		return 0, err
+	}
+	trace.Step("Snapshotting estimator cache and node infos done")
+
+	if snapShot.NumNodes() == 0 {
+		return 0, nil
+	}
+
+	maxAvailableComponentSets, err := es.estimateComponentSets(snapShot, request.Components)
+	if err != nil {
+		return 0, err
+	}
+	trace.Step("Computing estimation done")
+
+	return maxAvailableComponentSets, nil
+}
+
+func (es *AccurateSchedulerEstimatorServer) estimateComponentSets(
+	snapshot *schedcache.Snapshot,
+	componentRequirements []pb.ComponentRequirements,
+) (int32, error) {
+	allNodes, err := snapshot.NodeInfos().List()
+	if err != nil {
+		return 0, err
+	}
+
+	maxSets := pack.CalculateMaxComponentSets(allNodes, componentRequirements)
+
+	return maxSets, nil
 }

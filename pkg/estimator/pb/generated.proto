@@ -27,6 +27,34 @@ import "k8s.io/apimachinery/pkg/api/resource/generated.proto";
 // Package-wide variables from generator "generated".
 option go_package = "github.com/karmada-io/karmada/pkg/estimator/pb";
 
+// ComponentRequirements describes the resource and scheduling requirements for a single component.
+message ComponentRequirements {
+  // Name of the component (e.g., "jobmanager", "taskmanager").
+  optional string name = 1;
+
+  // Resource requirements for each replica of this component.
+  optional ReplicaRequirements replicaRequirements = 2;
+
+  // Number of replicas required for this component in a single set.
+  optional int32 replicas = 3;
+}
+
+// MaxAvailableComponentSetsRequest represents the request sent by the client to estimate the maximum number
+// of full sets of components that can be scheduled.
+message MaxAvailableComponentSetsRequest {
+  // Cluster represents the cluster name.
+  optional string cluster = 1;
+
+  // Components contains the requirements for each component (pod template) in the workload.
+  repeated ComponentRequirements components = 2;
+}
+
+// MaxAvailableComponentSetsResponse represents the response from the estimator.
+message MaxAvailableComponentSetsResponse {
+  // The maximum number of full sets of all components that can be scheduled on the cluster.
+  optional int32 maxSets = 1;
+}
+
 // MaxAvailableReplicasRequest represents the request that sent by gRPC client to calculate max available replicas.
 message MaxAvailableReplicasRequest {
   // Cluster represents the cluster name.

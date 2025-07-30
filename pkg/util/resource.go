@@ -302,3 +302,18 @@ func MaxInt64(a, b int64) int64 {
 	}
 	return b
 }
+
+// MinInt32 returns the smaller of two int32 numbers.
+func MinInt32(a, b int32) int32 {
+	if a <= b {
+		return a
+	}
+	return b
+}
+
+func MaxInt32(a, b int32) int32 {
+	if a >= b {
+		return a
+	}
+	return b
+}
