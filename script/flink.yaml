@@ -19,7 +19,9 @@
 apiVersion: flink.apache.org/v1beta1
 kind: FlinkDeployment
 metadata:
-  name: flink-example
+  name: flink-demo
+  labels:
+    app: flink-app
 spec:
   image: flink:1.20
   flinkVersion: v1_20
@@ -28,11 +30,11 @@ spec:
   serviceAccount: flink
   jobManager:
     resource:
-      memory: "2048m"
+      memory: 1024m
       cpu: 1
   taskManager:
     resource:
-      memory: "2048m"
+      memory: 2048m
       cpu: 1
   job:
     jarURI: local:///opt/flink/examples/streaming/StateMachineExample.jar

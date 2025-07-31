@@ -462,10 +462,6 @@ func (d *ResourceDetector) ApplyPolicy(object *unstructured.Unstructured, object
 				return fmt.Errorf("failed to update binding due to different owner reference UID, will " +
 					"try again later after binding is garbage collected, see https://github.com/karmada-io/karmada/issues/2090")
 			}
-
-			klog.Infof("Debug: Before update: binding.Spec.Components=%d, bindingCopy.Spec.Components=%d",
-				len(binding.Spec.Components), len(bindingCopy.Spec.Components))
-
 			// Just update necessary fields, especially avoid modifying Spec.Clusters which is scheduling result, if already exists.
 			bindingCopy.Annotations = util.DedupeAndMergeAnnotations(bindingCopy.Annotations, binding.Annotations)
 			bindingCopy.Labels = util.DedupeAndMergeLabels(bindingCopy.Labels, binding.Labels)
@@ -489,8 +485,6 @@ func (d *ResourceDetector) ApplyPolicy(object *unstructured.Unstructured, object
 				bindingCopy.Spec.Suspension.Suspension = binding.Spec.Suspension.Suspension
 			}
 			excludeClusterPolicy(bindingCopy)
-
-			klog.Infof("Debug: After update: bindingCopy.Spec.Components=%d", len(bindingCopy.Spec.Components))
 			return nil
 		})
 		if err != nil {
@@ -502,11 +496,6 @@ func (d *ResourceDetector) ApplyPolicy(object *unstructured.Unstructured, object
 		klog.Errorf("Failed to apply policy(%s) for object: %s. error: %v", policy.Name, objectKey, err)
 		return err
 	}
-
-	klog.Infof("Debug: binding.Spec.Components=%d, bindingCopy.Spec.Components=%d",
-		len(binding.Spec.Components), len(bindingCopy.Spec.Components))
-	klog.Infof("Debug: binding.Spec.Replicas=%d, bindingCopy.Spec.Replicas=%+v",
-		binding.Spec.Replicas, bindingCopy.Spec.Replicas)
 
 	switch operationResult {
 	case controllerutil.OperationResultCreated:
@@ -791,7 +780,6 @@ func (d *ResourceDetector) BuildResourceBinding(object *unstructured.Unstructure
 			return nil, err
 		}
 		propagationBinding.Spec.Components = components
-		klog.Infof("Set %d components in propagationBinding for %s", len(components), propagationBinding.Spec.Components[0].Name)
 	}
 
 	if features.FeatureGate.Enabled(features.PriorityBasedScheduling) && policySpec.SchedulePriority != nil {

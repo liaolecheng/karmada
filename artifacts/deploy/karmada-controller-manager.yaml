@@ -24,7 +24,7 @@ spec:
           securityContext:
             allowPrivilegeEscalation: false
             privileged: false
-          image: docker.io/karmada/karmada-controller-manager:dev
+          image: docker.io/karmada/karmada-controller-manager:latest
           imagePullPolicy: IfNotPresent
           env:
             - name: POD_IP

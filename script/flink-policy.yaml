@@ -7,7 +7,9 @@ spec:
   resourceSelectors:
     - apiVersion: flink.apache.org/v1beta1
       kind: FlinkDeployment
-      name: flink-example
+      labelSelector:
+        matchLabels:
+          app: flink-app
   placement:
     clusterAffinity:
       clusterNames:

@@ -6,7 +6,7 @@ metadata:
   labels:
     app: karmada-scheduler
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app: karmada-scheduler
@@ -24,7 +24,7 @@ spec:
           securityContext:
             allowPrivilegeEscalation: false
             privileged: false
-          image: docker.io/karmada/karmada-scheduler:dev
+          image: docker.io/karmada/karmada-scheduler:latest
           imagePullPolicy: IfNotPresent
           livenessProbe:
             httpGet:

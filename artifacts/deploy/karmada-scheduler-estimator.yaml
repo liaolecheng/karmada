@@ -24,7 +24,7 @@ spec:
           securityContext:
             allowPrivilegeEscalation: false
             privileged: false
-          image: docker.io/karmada/karmada-scheduler-estimator:dev
+          image: docker.io/karmada/karmada-scheduler-estimator:latest
           imagePullPolicy: IfNotPresent
           env:
             - name: POD_IP
