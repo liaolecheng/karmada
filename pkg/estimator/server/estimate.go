@@ -126,7 +126,7 @@ func (es *AccurateSchedulerEstimatorServer) EstimateComponentSets(ctx context.Co
 		return 0, nil
 	}
 
-	maxAvailableComponentSets, err := es.estimateComponentSets(snapShot, request.Components)
+	maxAvailableComponentSets, err := es.estimateComponentSets(ctx, snapShot, request.Components)
 	if err != nil {
 		return 0, err
 	}
@@ -136,6 +136,7 @@ func (es *AccurateSchedulerEstimatorServer) EstimateComponentSets(ctx context.Co
 }
 
 func (es *AccurateSchedulerEstimatorServer) estimateComponentSets(
+	ctx context.Context,
 	snapshot *schedcache.Snapshot,
 	componentRequirements []pb.ComponentRequirements,
 ) (int32, error) {
@@ -144,7 +145,20 @@ func (es *AccurateSchedulerEstimatorServer) estimateComponentSets(
 		return 0, err
 	}
 
-	maxSets := pack.CalculateMaxComponentSets(allNodes, componentRequirements)
+	sets, ret := es.estimateFramework.RunEstimateComponentsPlugins(ctx, snapshot, componentRequirements)
+	// No replicas can be scheduled on the cluster, skip further checks and return 0
+	if ret.IsUnschedulable() {
+		return 0, nil
+	}
 
-	return maxSets, nil
+	if !ret.IsSuccess() && !ret.IsNoOperation() {
+		return sets, fmt.Errorf("estimate replica plugins fails with %s", ret.Reasons())
+	}
+
+	res := pack.CalculateMaxComponentSets(allNodes, componentRequirements)
+
+	if ret.IsSuccess() && sets < res {
+		res = sets
+	}
+	return res, nil
 }

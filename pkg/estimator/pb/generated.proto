@@ -30,12 +30,15 @@ option go_package = "github.com/karmada-io/karmada/pkg/estimator/pb";
 // ComponentRequirements describes the resource and scheduling requirements for a single component.
 message ComponentRequirements {
   // Name of the component (e.g., "jobmanager", "taskmanager").
+  // +required
   optional string name = 1;
 
   // Resource requirements for each replica of this component.
+  // +required
   optional ReplicaRequirements replicaRequirements = 2;
 
   // Number of replicas required for this component in a single set.
+  // +required
   optional int32 replicas = 3;
 }
 
@@ -43,15 +46,18 @@ message ComponentRequirements {
 // of full sets of components that can be scheduled.
 message MaxAvailableComponentSetsRequest {
   // Cluster represents the cluster name.
+  // +required
   optional string cluster = 1;
 
   // Components contains the requirements for each component (pod template) in the workload.
+  // +required
   repeated ComponentRequirements components = 2;
 }
 
 // MaxAvailableComponentSetsResponse represents the response from the estimator.
 message MaxAvailableComponentSetsResponse {
   // The maximum number of full sets of all components that can be scheduled on the cluster.
+  // +required
   optional int32 maxSets = 1;
 }
 

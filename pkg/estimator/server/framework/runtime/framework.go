@@ -40,9 +40,10 @@ const (
 // frameworkImpl implements the Framework interface and is responsible for initializing and running scheduler
 // plugins.
 type frameworkImpl struct {
-	estimateReplicasPlugins []framework.EstimateReplicasPlugin
-	clientSet               clientset.Interface
-	informerFactory         informers.SharedInformerFactory
+	estimateReplicasPlugins   []framework.EstimateReplicasPlugin
+	estimateComponentsPlugins []framework.EstimateComponentsPlugin
+	clientSet                 clientset.Interface
+	informerFactory           informers.SharedInformerFactory
 }
 
 var _ framework.Framework = &frameworkImpl{}
@@ -85,12 +86,16 @@ func NewFramework(r Registry, opts ...Option) (framework.Framework, error) {
 	estimateReplicasPluginsList := reflect.ValueOf(&f.estimateReplicasPlugins).Elem()
 	estimateReplicasType := estimateReplicasPluginsList.Type().Elem()
 
+	estimateComponentsPluginsList := reflect.ValueOf(&f.estimateComponentsPlugins).Elem()
+	estimateComponentsType := estimateComponentsPluginsList.Type().Elem()
+
 	for name, factory := range r {
 		p, err := factory(f)
 		if err != nil {
 			return nil, fmt.Errorf("failed to initialize plugin %q: %w", name, err)
 		}
 		addPluginToList(p, estimateReplicasType, &estimateReplicasPluginsList)
+		addPluginToList(p, estimateComponentsType, &estimateComponentsPluginsList)
 	}
 	return f, nil
 }
@@ -143,4 +148,38 @@ func (frw *frameworkImpl) runEstimateReplicasPlugins(
 	replica, ret := pl.Estimate(ctx, snapshot, replicaRequirements)
 	metrics.PluginExecutionDuration.WithLabelValues(pl.Name(), estimator).Observe(utilmetrics.DurationInSeconds(startTime))
 	return replica, ret
+}
+
+// RunEstimateComponentsPlugins runs the set of configured EstimateComponentsPlugins
+// for estimating the maximum number of full sets (i.e., all components together) that can be scheduled on the cluster,
+// based on the given components.
+// It returns an integer and an error.
+// The integer represents the maximum number of full sets that can be scheduled on the cluster.
+func (frw *frameworkImpl) RunEstimateComponentsPlugins(ctx context.Context, snapshot *schedcache.Snapshot, components []pb.ComponentRequirements) (int32, *framework.Result) {
+	startTime := time.Now()
+	defer func() {
+		metrics.FrameworkExtensionPointDuration.WithLabelValues(estimator).Observe(utilmetrics.DurationInSeconds(startTime))
+	}()
+	var maxAvailableComponentSets int32 = math.MaxInt32
+	results := make(framework.PluginToResult)
+	for _, pl := range frw.estimateComponentsPlugins {
+		plSets, ret := frw.runEstimateComponentsPlugins(ctx, pl, snapshot, components)
+		if (ret.IsSuccess() || ret.IsUnschedulable()) && plSets < maxAvailableComponentSets {
+			maxAvailableComponentSets = plSets
+		}
+		results[pl.Name()] = ret
+	}
+	return maxAvailableComponentSets, results.Merge()
+}
+
+func (frw *frameworkImpl) runEstimateComponentsPlugins(
+	ctx context.Context,
+	pl framework.EstimateComponentsPlugin,
+	snapshot *schedcache.Snapshot,
+	components []pb.ComponentRequirements,
+) (int32, *framework.Result) {
+	startTime := time.Now()
+	maxAvailableComponentSets, ret := pl.EstimateComponents(ctx, snapshot, components)
+	metrics.PluginExecutionDuration.WithLabelValues(pl.Name(), estimator).Observe(utilmetrics.DurationInSeconds(startTime))
+	return maxAvailableComponentSets, ret
 }

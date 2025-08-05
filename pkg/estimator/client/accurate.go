@@ -133,7 +133,8 @@ func (se *SchedulerEstimator) maxAvailableComponentSets(ctx context.Context, clu
 		Cluster:    cluster,
 		Components: make([]pb.ComponentRequirements, len(componentRequirements)),
 	}
-	for i, cr := range componentRequirements {
+	for i := range componentRequirements {
+		cr := &componentRequirements[i]
 		req.Components[i].Name = cr.Name
 		req.Components[i].Replicas = cr.Replicas
 		if cr.ReplicaRequirements != nil {

@@ -38,6 +38,7 @@ type Framework interface {
 	// The Result contains code, reasons and error
 	// it is merged from all plugins returned result codes
 	RunEstimateReplicasPlugins(ctx context.Context, snapshot *schedcache.Snapshot, replicaRequirements *pb.ReplicaRequirements) (int32, *Result)
+	RunEstimateComponentsPlugins(ctx context.Context, snapshot *schedcache.Snapshot, components []pb.ComponentRequirements) (int32, *Result)
 	// TODO(wengyao04): we can add filter and score plugin extension points if needed in the future
 }
 
@@ -56,6 +57,15 @@ type EstimateReplicasPlugin interface {
 	// The Result contains code, reasons and error
 	// it is merged from all plugins returned result codes
 	Estimate(ctx context.Context, snapshot *schedcache.Snapshot, replicaRequirements *pb.ReplicaRequirements) (int32, *Result)
+}
+
+type EstimateComponentsPlugin interface {
+	Plugin
+	// EstimateComponents is called for multi-component workloads.
+	// It receives a slice of ComponentReplicaRequirements, each describing the requirements for a component (pod template).
+	// It returns the maximum number of full sets (i.e., all components together) that can be scheduled on the cluster,
+	// and a Result object with details.
+	EstimateComponents(ctx context.Context, snapshot *schedcache.Snapshot, components []pb.ComponentRequirements) (int32, *Result)
 }
 
 // Handle provides data and some tools that plugins can use. It is

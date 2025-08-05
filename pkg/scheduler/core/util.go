@@ -141,7 +141,6 @@ func calAvailableComponentSets(clusters []*clusterv1alpha1.Cluster, spec *workv1
 
 	klog.V(4).Infof("Target cluster calculated by estimators (available cluster && maxAvailableReplicas): %v", availableTargetClusters)
 	return availableTargetClusters
-
 }
 
 // attachZeroReplicasCluster  attach cluster in clusters into targetCluster

@@ -69,12 +69,13 @@ func CalculateMaxComponentSets(
 func convertComponents(components []pb.ComponentRequirements) []componentItem {
 	items := make([]componentItem, len(components))
 
-	for i, comp := range components {
+	for i := range components {
+		comp := &components[i]
 		items[i] = componentItem{
 			resourceList: comp.ReplicaRequirements.ResourceRequest,
 			replicas:     comp.Replicas,
+			affinity:     nodeutil.GetRequiredNodeAffinity(comp.ReplicaRequirements),
 		}
-		items[i].affinity = nodeutil.GetRequiredNodeAffinity(comp.ReplicaRequirements)
 		if comp.ReplicaRequirements.NodeClaim != nil {
 			items[i].tolerations = comp.ReplicaRequirements.NodeClaim.Tolerations
 		}
